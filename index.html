@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RasenDoktor — KI-Rasenanalyse</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --green-deep: #1a3a1a;
+    --green-mid: #2d5a2d;
+    --green-light: #4a8c4a;
+    --green-fresh: #6dbf6d;
+    --cream: #f5f0e8;
+    --sand: #e8dfc8;
+    --earth: #8b6f47;
+    --text: #1a2410;
+    --muted: #6b7c5a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--green-deep);
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    color: var(--cream);
+    letter-spacing: -0.5px;
+  }
+
+  .logo span { color: var(--green-fresh); }
+
+  .tagline {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-left: auto;
+    letter-spacing: 0.5px;
+  }
+
+  .hero {
+    background: linear-gradient(135deg, var(--green-deep) 0%, var(--green-mid) 60%, var(--green-light) 100%);
+    padding: 3rem 2rem 4rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234a8c4a' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.4;
+  }
+
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    color: white;
+    margin-bottom: 1rem;
+    position: relative;
+  }
+
+  .hero p {
+    color: rgba(255,255,255,0.75);
+    font-size: 1.1rem;
+    max-width: 520px;
+    margin: 0 auto 2rem;
+    line-height: 1.6;
+    position: relative;
+  }
+
+  .steps-row {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    position: relative;
+    flex-wrap: wrap;
+  }
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba(255,255,255,0.9);
+    font-size: 0.9rem;
+  }
+
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--green-fresh);
+    color: var(--green-deep);
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  main {
+    max-width: 860px;
+    margin: -2rem auto 0;
+    padding: 0 1.5rem 4rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .card {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 32px rgba(26,58,26,0.12);
+    margin-bottom: 1.5rem;
+  }
+
+  .card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    color: var(--green-deep);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .upload-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (max-width: 600px) {
+    .upload-grid { grid-template-columns: 1fr; }
+  }
+
+  .upload-zone {
+    border: 2px dashed var(--sand);
+    border-radius: 12px;
+    padding: 2rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--cream);
+  }
+
+  .upload-zone:hover { border-color: var(--green-light); background: #f0f5f0; }
+
+  .upload-zone.has-image {
+    border-style: solid;
+    border-color: var(--green-fresh);
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .upload-zone img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+    display: block;
+  }
+
+  .upload-zone .overlay-label {
+    position: absolute;
+    top: 8px; left: 8px;
+    background: var(--green-deep);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .upload-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+
+  .upload-zone p { color: var(--muted); font-size: 0.85rem; line-height: 1.4; }
+
+  .upload-zone strong {
+    color: var(--green-mid);
+    font-size: 0.95rem;
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+
+  input[type="file"] { display: none; }
+
+  .email-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    align-items: center;
+  }
+
+  .email-row input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--sand);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    background: var(--cream);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .email-row input:focus { border-color: var(--green-light); }
+
+  .problem-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .chip {
+    padding: 0.4rem 0.9rem;
+    border: 1.5px solid var(--sand);
+    border-radius: 20px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: white;
+    color: var(--muted);
+    user-select: none;
+  }
+
+  .chip:hover { border-color: var(--green-light); color: var(--green-mid); }
+  .chip.active { background: var(--green-deep); border-color: var(--green-deep); color: white; }
+
+  .analyze-btn {
+    width: 100%;
+    padding: 1rem;
+    background: var(--green-deep);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+
+  .analyze-btn:hover:not(:disabled) {
+    background: var(--green-mid);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(26,58,26,0.25);
+  }
+
+  .analyze-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .loading-state {
+    text-align: center;
+    padding: 2rem;
+    display: none;
+  }
+
+  .grass-loader {
+    font-size: 3rem;
+    animation: bounce 0.8s infinite alternate;
+  }
+
+  @keyframes bounce {
+    from { transform: translateY(0); }
+    to { transform: translateY(-10px); }
+  }
+
+  .loading-state p { color: var(--muted); margin-top: 1rem; font-size: 0.95rem; }
+
+  #result-card { display: none; }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--sand);
+    margin-bottom: 1.5rem;
+  }
+
+  .score-badge {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-weight: 700;
+  }
+
+  .score-badge .score-num { font-size: 1.4rem; line-height: 1; }
+  .score-badge .score-label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .score-good { background: #e8f5e8; color: var(--green-mid); border: 2px solid var(--green-fresh); }
+  .score-mid  { background: #fff8e1; color: #b8860b; border: 2px solid #ffd54f; }
+  .score-bad  { background: #fdecea; color: #c0392b; border: 2px solid #ef9a9a; }
+
+  .result-intro h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    color: var(--green-deep);
+    margin-bottom: 0.25rem;
+  }
+
+  .result-intro p { color: var(--muted); font-size: 0.9rem; }
+
+  .findings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .finding-card {
+    background: var(--cream);
+    border-radius: 10px;
+    padding: 1rem;
+    border-left: 3px solid var(--green-fresh);
+  }
+
+  .finding-card.warn { border-left-color: #ffd54f; }
+  .finding-card.alert { border-left-color: #ef9a9a; }
+  .finding-icon { font-size: 1.4rem; margin-bottom: 0.4rem; }
+  .finding-card h4 { font-size: 0.85rem; font-weight: 500; color: var(--text); margin-bottom: 0.2rem; }
+  .finding-card p { font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
+
+  .recommendations h4 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    color: var(--green-deep);
+    margin-bottom: 0.75rem;
+  }
+
+  .rec-item {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--sand);
+    align-items: flex-start;
+  }
+
+  .rec-item:last-child { border-bottom: none; }
+
+  .rec-priority {
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .prio-sofort { background: #fdecea; color: #c0392b; }
+  .prio-bald   { background: #fff8e1; color: #b8860b; }
+  .prio-info   { background: #e8f5e8; color: var(--green-mid); }
+
+  .rec-text { font-size: 0.9rem; color: var(--text); line-height: 1.45; }
+
+  .result-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
+
+  .btn-secondary {
+    flex: 1;
+    padding: 0.75rem;
+    background: transparent;
+    border: 1.5px solid var(--green-deep);
+    color: var(--green-deep);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-secondary:hover { background: var(--green-deep); color: white; }
+
+  #error-msg {
+    display: none;
+    background: #fdecea;
+    border: 1px solid #ef9a9a;
+    color: #c0392b;
+    padding: 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    margin-top: 1rem;
+  }
+
+  .info-bar {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.8rem;
+    padding: 1rem;
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .info-bar span { display: flex; align-items: center; gap: 0.3rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Rasen<span>Check</span></div>
+  <div class="tagline">KI-gestützte Rasendiagnose</div>
+</header>
+
+<div class="hero">
+  <h1>Ihr Rasen verdient die beste Pflege</h1>
+  <p>Laden Sie zwei Fotos hoch — unsere KI erkennt Probleme und gibt Ihnen eine konkrete Pflegeempfehlung.</p>
+  <div class="steps-row">
+    <div class="step"><div class="step-num">1</div> 2 Fotos hochladen</div>
+    <div class="step"><div class="step-num">2</div> KI analysiert</div>
+    <div class="step"><div class="step-num">3</div> Empfehlung erhalten</div>
+  </div>
+</div>
+
+<main>
+
+  <div class="card">
+    <div class="card-title">📸 Rasen-Fotos hochladen</div>
+
+    <div class="upload-grid">
+      <div class="upload-zone" id="zone1" onclick="document.getElementById('file1').click()">
+        <div class="upload-icon">🌿</div>
+        <strong>Übersichtsfoto</strong>
+        <p>Gesamtansicht des Rasens<br>aus ca. 2m Entfernung</p>
+      </div>
+      <input type="file" id="file1" accept="image/*" onchange="handleUpload(this, 'zone1', 1)">
+
+      <div class="upload-zone" id="zone2" onclick="document.getElementById('file2').click()">
+        <div class="upload-icon">🔍</div>
+        <strong>Detailfoto</strong>
+        <p>Nahaufnahme der<br>Problemstelle / Grasnarbe</p>
+      </div>
+      <input type="file" id="file2" accept="image/*" onchange="handleUpload(this, 'zone2', 2)">
+    </div>
+
+    <div style="margin-bottom: 1.25rem;">
+      <div style="font-size: 0.85rem; color: var(--muted); margin-bottom: 0.6rem; font-weight: 500;">Was fällt Ihnen auf? (optional)</div>
+      <div class="problem-chips">
+        <div class="chip" onclick="toggleChip(this)">Kahle Stellen</div>
+        <div class="chip" onclick="toggleChip(this)">Moos</div>
+        <div class="chip" onclick="toggleChip(this)">Vergilbung</div>
+        <div class="chip" onclick="toggleChip(this)">Unkraut</div>
+        <div class="chip" onclick="toggleChip(this)">Pilze / Schimmel</div>
+        <div class="chip" onclick="toggleChip(this)">Verdichtung</div>
+        <div class="chip" onclick="toggleChip(this)">Trockenheit</div>
+        <div class="chip" onclick="toggleChip(this)">Staunässe</div>
+      </div>
+    </div>
+
+    <div class="email-row">
+      <input type="email" id="email-input" placeholder="E-Mail für ausführlichen Report (optional)">
+    </div>
+
+    <button class="analyze-btn" id="analyze-btn" onclick="startAnalysis()" disabled>
+      🔬 Jetzt Rasen analysieren
+    </button>
+
+    <div id="error-msg"></div>
+  </div>
+
+  <div class="card loading-state" id="loading-card">
+    <div class="grass-loader">🌱</div>
+    <p id="loading-text">Fotos werden analysiert …</p>
+  </div>
+
+  <div class="card" id="result-card">
+    <div class="result-header">
+      <div class="score-badge" id="score-badge">
+        <div class="score-num" id="score-num">—</div>
+        <div class="score-label">Zustand</div>
+      </div>
+      <div class="result-intro">
+        <h3 id="result-title">Ihre Rasendiagnose</h3>
+        <p id="result-subtitle">Basierend auf Ihren Fotos</p>
+      </div>
+    </div>
+
+    <div class="findings-grid" id="findings-grid"></div>
+
+    <div class="recommendations">
+      <h4>📋 Ihre Pflegeempfehlungen</h4>
+      <div id="rec-list"></div>
+    </div>
+
+    <div class="result-actions">
+      <button class="btn-secondary" onclick="resetForm()">↩ Neue Analyse</button>
+      <button class="analyze-btn" style="flex: 2" onclick="window.print()">📄 Report drucken</button>
+    </div>
+  </div>
+
+</main>
+
+<div class="info-bar">
+  <span>🔒 Fotos werden nicht dauerhaft gespeichert</span>
+  <span>⚡ Analyse in ~15 Sekunden</span>
+  <span>🌍 Für alle Rasentypen geeignet</span>
+</div>
+
+<script>
+  let images = { 1: null, 2: null };
+  let selectedProblems = [];
+
+  function handleUpload(input, zoneId, num) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      images[num] = e.target.result.split(',')[1];
+      const zone = document.getElementById(zoneId);
+      zone.classList.add('has-image');
+      zone.innerHTML = `<img src="${e.target.result}" alt="Foto ${num}"><div class="overlay-label">Foto ${num} ✓</div>`;
+      checkReady();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function checkReady() {
+    document.getElementById('analyze-btn').disabled = !(images[1] && images[2]);
+  }
+
+  function toggleChip(el) {
+    el.classList.toggle('active');
+    const label = el.textContent;
+    if (el.classList.contains('active')) {
+      selectedProblems.push(label);
+    } else {
+      selectedProblems = selectedProblems.filter(p => p !== label);
+    }
+  }
+
+  async function startAnalysis() {
+    document.getElementById('analyze-btn').disabled = true;
+    document.getElementById('error-msg').style.display = 'none';
+    document.getElementById('result-card').style.display = 'none';
+
+    const loadingCard = document.getElementById('loading-card');
+    loadingCard.style.display = 'block';
+
+    const loadingTexts = [
+      'Fotos werden analysiert …',
+      'Grasnarbe wird bewertet …',
+      'Nährstoffbedarf wird ermittelt …',
+      'Empfehlungen werden erstellt …'
+    ];
+    let li = 0;
+    const lt = setInterval(() => {
+      li = (li + 1) % loadingTexts.length;
+      document.getElementById('loading-text').textContent = loadingTexts[li];
+    }, 2500);
+
+    try {
+      const response = await fetch('/.netlify/functions/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image1: images[1],
+          image2: images[2],
+          problems: selectedProblems
+        })
+      });
+
+      clearInterval(lt);
+      loadingCard.style.display = 'none';
+
+      if (!response.ok) throw new Error(`Fehler: ${response.status}`);
+
+      const result = await response.json();
+      renderResult(result);
+
+    } catch (err) {
+      clearInterval(lt);
+      loadingCard.style.display = 'none';
+      document.getElementById('analyze-btn').disabled = false;
+      const errEl = document.getElementById('error-msg');
+      errEl.style.display = 'block';
+      errEl.textContent = `Fehler bei der Analyse: ${err.message}. Bitte versuchen Sie es erneut.`;
+    }
+  }
+
+  function renderResult(r) {
+    const score = r.score || 5;
+    const badge = document.getElementById('score-badge');
+    document.getElementById('score-num').textContent = score + '/10';
+    badge.className = 'score-badge ' + (score >= 7 ? 'score-good' : score >= 4 ? 'score-mid' : 'score-bad');
+    document.getElementById('result-title').textContent = r.titel || 'Rasendiagnose';
+    document.getElementById('result-subtitle').textContent = r.zusammenfassung || '';
+
+    document.getElementById('findings-grid').innerHTML = (r.befunde || []).map(b => `
+      <div class="finding-card ${b.typ === 'alert' ? 'alert' : b.typ === 'warn' ? 'warn' : ''}">
+        <div class="finding-icon">${b.icon}</div>
+        <h4>${b.titel}</h4>
+        <p>${b.text}</p>
+      </div>
+    `).join('');
+
+    document.getElementById('rec-list').innerHTML = (r.empfehlungen || []).map(rec => `
+      <div class="rec-item">
+        <span class="rec-priority prio-${rec.prioritaet}">${rec.prioritaet === 'sofort' ? 'Sofort' : rec.prioritaet === 'bald' ? 'Bald' : 'Tipp'}</span>
+        <span class="rec-text">${rec.text}</span>
+      </div>
+    `).join('');
+
+    document.getElementById('result-card').style.display = 'block';
+    document.getElementById('result-card').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function resetForm() {
+    images = { 1: null, 2: null };
+    selectedProblems = [];
+    document.getElementById('result-card').style.display = 'none';
+    document.getElementById('zone1').classList.remove('has-image');
+    document.getElementById('zone1').innerHTML = `<div class="upload-icon">🌿</div><strong>Übersichtsfoto</strong><p>Gesamtansicht des Rasens<br>aus ca. 2m Entfernung</p>`;
+    document.getElementById('zone2').classList.remove('has-image');
+    document.getElementById('zone2').innerHTML = `<div class="upload-icon">🔍</div><strong>Detailfoto</strong><p>Nahaufnahme der<br>Problemstelle / Grasnarbe</p>`;
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    document.getElementById('email-input').value = '';
+    document.getElementById('analyze-btn').disabled = true;
+  }
+</script>
+
+</body>
+</html>
