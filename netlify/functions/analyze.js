@@ -30,7 +30,7 @@ Antworte NUR als JSON-Objekt (kein Markdown, keine Erklärungen):
 }`;
 
     const requestBody = JSON.stringify({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-5,
       max_tokens: 1000,
       messages: [{
         role: "user",
