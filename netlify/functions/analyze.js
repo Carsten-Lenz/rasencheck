@@ -1,3 +1,5 @@
+const https = require("https");
+
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
@@ -14,41 +16,65 @@ exports.handler = async (event) => {
 
 ${problemsText}
 
-Antworte NUR als JSON-Objekt (kein Markdown):
+Antworte NUR als JSON-Objekt (kein Markdown, keine Erklärungen):
 {
   "score": <Zahl 1-10>,
   "titel": "<kurzer Diagnosetitel>",
-  "zusammenfassung": "<2 Sätze>",
+  "zusammenfassung": "<2 Sätze Gesamtbild>",
   "befunde": [
-    { "icon": "<emoji>", "typ": "gut|warn|alert", "titel": "<Name>", "text": "<1 Satz>" }
+    { "icon": "<emoji>", "typ": "gut|warn|alert", "titel": "<Befundname>", "text": "<1 Satz>" }
   ],
   "empfehlungen": [
-    { "prioritaet": "sofort|bald|info", "text": "<Maßnahme>" }
+    { "prioritaet": "sofort|bald|info", "text": "<konkrete Maßnahme>" }
   ]
 }`;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01"
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        messages: [{
-          role: "user",
-          content: [
-            { type: "image", source: { type: "base64", media_type: "image/jpeg", data: image1 } },
-            { type: "image", source: { type: "base64", media_type: "image/jpeg", data: image2 } },
-            { type: "text", text: prompt }
-          ]
-        }]
-      })
+    const requestBody = JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: image1 } },
+          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: image2 } },
+          { type: "text", text: prompt }
+        ]
+      }]
     });
 
-    const data = await response.json();
+    const result = await new Promise((resolve, reject) => {
+      const options = {
+        hostname: "api.anthropic.com",
+        path: "/v1/messages",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+          "Content-Length": Buffer.byteLength(requestBody)
+        }
+      };
+
+      const req = https.request(options, (res) => {
+        let data = "";
+        res.on("data", (chunk) => data += chunk);
+        res.on("end", () => resolve({ status: res.statusCode, body: data }));
+      });
+
+      req.on("error", reject);
+      req.write(requestBody);
+      req.end();
+    });
+
+    if (result.status !== 200) {
+      console.error("API Error:", result.body);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: `API returned ${result.status}: ${result.body}` })
+      };
+    }
+
+    const data = JSON.parse(result.body);
     const raw = data.content.map(b => b.text || "").join("");
     const clean = raw.replace(/```json|```/g, "").trim();
 
@@ -59,6 +85,7 @@ Antworte NUR als JSON-Objekt (kein Markdown):
     };
 
   } catch (err) {
+    console.error("Function error:", err);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: err.message })
