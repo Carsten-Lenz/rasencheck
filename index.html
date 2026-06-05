@@ -531,18 +531,37 @@
   let images = { 1: null, 2: null };
   let selectedProblems = [];
 
+  function compressImage(file, callback) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxSize = 1024;
+        let w = img.width, h = img.height;
+        if (w > h && w > maxSize) { h = h * maxSize / w; w = maxSize; }
+        else if (h > maxSize) { w = w * maxSize / h; h = maxSize; }
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const compressed = canvas.toDataURL('image/jpeg', 0.8);
+        callback(compressed);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
   function handleUpload(input, zoneId, num) {
     const file = input.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      images[num] = e.target.result.split(',')[1];
+    compressImage(file, (compressed) => {
+      images[num] = compressed.split(',')[1];
       const zone = document.getElementById(zoneId);
       zone.classList.add('has-image');
-      zone.innerHTML = `<img src="${e.target.result}" alt="Foto ${num}"><div class="overlay-label">Foto ${num} ✓</div>`;
+      zone.innerHTML = `<img src="${compressed}" alt="Foto ${num}"><div class="overlay-label">Foto ${num} ✓</div>`;
       checkReady();
-    };
-    reader.readAsDataURL(file);
+    });
   }
 
   function checkReady() {
